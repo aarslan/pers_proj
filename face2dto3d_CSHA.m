@@ -106,6 +106,7 @@ parfor i = 1:numPics
         origPats{i,j} = imresize(origPat, downSamSiz);
     end
 end
+size(origPats);
 try
 save('results_lessBands.mat', 's1vec', 'truth', 'origPats', 'randomizer')
 catch
