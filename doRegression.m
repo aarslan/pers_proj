@@ -1,5 +1,5 @@
 
-function doRegression(origPats, s1vec, truth)
+function res = doRegression(origPats, s1vec, truth, or)
 
 p = makeParam;
 
@@ -21,7 +21,6 @@ for im=1:p.totalPics;
             dataMat(count, (ori-1)*numPix+1: (ori*numPix)) = mat2gray(s1vec{im, pat, ori});
             
         end
-        lello{count} = repmat({dataMat(count,:)},1,3);
         truthMat(count,:) = truth{im,pat};
         count = count+1;
     end
@@ -48,41 +47,54 @@ Y =  truthMat(trainInd,:);
 Xtest = dataMat(testInd,:);
 Ytest = truthMat(testInd,:);
 
-[B, bint, r, rint, STATS]=regress(Y(:,1),X, 0.001);
-Yhat=X*B;
-corr(Y(:,1), Yhat)
+[B, bint, r, rint, STATS]=regress(Y(:,or),X, 0.001);
+regressStats.bint = bint;
+regressStats.r = r;
+regressStats.rint = rint;
+regressStats.STATS = STATS;
+res.regressStats = regressStats;
 
-Yhat=Xtest*B;
-'TEST ERROR'
-corr(Ytest(:,1), Yhat)
+YhatTra=X*B;
 
-errz = getMSE(Ytest(:,1), Yhat)
+YhatTest=Xtest*B;
 
+res.Ymean = mean(Y);
+
+res.CorrTra = corr(Y(:,or), YhatTra);
+display(sprintf('training error: %f', res.CorrTra))
+
+res.CorrTest = corr(Ytest(:,or), YhatTest);
+display(sprintf('test error: %f', res.CorrTest))
+
+res.MSE = getMSE(Ytest(:,or), YhatTest);
+display(sprintf('mean sq error: %f', res.MSE))
+
+res.YhatTra = YhatTra;
+res.YhatTest = YhatTest;
+res.Ytest = Ytest;
 % IMRI's solution
 %beta = Y\X;
 %Yimri = Xtest*beta';
 
 
 %singe value
-betaTra = Y(:,1)\X;
-YTra = X*betaTra';
-errzTra = getMSE(Y,YTra);
-Ymean = mean(Y);
-
-betaTest = Y(:,1)\X;
-YTest = Xtest*betaTest';
-errzTest = getMSE(Y,YTest);
-Ymean = mean(Y);
-
-
-
-errz = getMSE(Ytest,Yimri);
-Ymean = mean(Ytest);
-
-
-
-model = initlssvm(X,Y,type,gam, sig2,'RBF_kernel');
-model = trainlssvm(model);
+% betaTra = Y(:,1)\X;
+% YTra = X*betaTra';
+% errzTra = getMSE(Y,YTra);
+% Ymean = mean(Y);
+% 
+% betaTest = Y(:,1)\X;
+% YTest = Xtest*betaTest';
+% errzTest = getMSE(Y,YTest);
+% Ymean = mean(Y);
+% 
+% errz = getMSE(Ytest,Yimri);
+% Ymean = mean(Ytest);
+% 
+% 
+% 
+% model = initlssvm(X,Y,type,gam, sig2,'RBF_kernel');
+% model = trainlssvm(model);
 
 % [alpha,b] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
 % Ytest = simlssvm({dataMat(trainInd,end-1000:end), truthMat(trainInd,:),type,gam,sig2,'RBF_kernel'},{alpha,b},dataMat(testInd,end-1000:end));
@@ -107,7 +119,7 @@ end
 
 function  params = makeParam
 params.ratio = 0.75;
-params.totalPics = 50; %total number of pics to use
+params.totalPics = 1500; %total number of pics to use
 end
 
 function errz = getMSE(dact,dpred)

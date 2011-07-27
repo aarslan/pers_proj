@@ -38,7 +38,7 @@ fprintf('\n');
 if strcmp(computer, 'MACI64')
     dataPath = '/Users/aarslan/Dropbox/Blender Faces Database/Sample_Static_Database';                % Path where the Caltech 101 dataset can be found (*** required ***).
 else
-    dataPath = '/gpfs/data/tserre/data/face_database/lfw';
+    dataPath = '/gpfs/home/aarslan/work/PART_staticFaceDataBase';
 end
 
 addpath('/Users/aarslan/Documents/MATLAB/cns/hmax/face_lfw')
@@ -46,11 +46,11 @@ p = hmax_cvpr06_params_full_lfw;  % Model configuration to use.  Note that this 
 
 
 numFeatures = 4096;           % Number of S2 features to learn.
-numPat = 5;
+numPat = 10;
 patSize = 50;
-downSamSiz = [15]
+downSamSiz = [13 13];
 oriMode = 1;                    % 1= mean orientation in the patch, else = mid point in the patch
-numPics = 500;                  %numel(origPicPaths)
+numPics = 2000;                  %numel(origPicPaths)
 numTrain    = 8;             % Number of training images per category.
 maxTest     = inf;            % Maximum number of test images per category.
 minSetSize  = 15;              % minimum number of images for a person required to include that person in the classification.
@@ -87,7 +87,7 @@ origPats  = cell(numPics, numPat);
 
 randomizer = randperm(numPics);
 
-for i = 1:numPics
+parfor i = 1:numPics
     
     fprintf('%u/%u: computing s1 vector for %s\n', i, numPics, origPicPaths{i});
     
@@ -103,9 +103,10 @@ for i = 1:numPics
         [x y z] = getAveOri(normPat, oriMode);
         truth{i,j} = [x, y , z];
         s1vec(i,j,:) = vectorizeS1(s1,rect, okBands, downSamSiz);
-        origPats{i,j} = origPat;
+        origPats{i,j} = imresize(origPat, downSamSiz);
     end
 end
+size(origPats);
 try
 save('results_lessBands.mat', 's1vec', 'truth', 'origPats', 'randomizer')
 catch
