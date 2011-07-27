@@ -104,17 +104,15 @@ for i = 1:numPics
     imNorm = imread(normPicPaths{randomizer(i)});
     im = rgb2gray(im);
     [ s1] = getS1C1_legacy(im, fSiz,filters,c1OL,numSimpleFilters );
-    
-    for j=1:numPat
+    regPat.imSize = size(im);
+    regPat.numPat = numPat;
+    regPat.patSize = patSize;
+    parfor j=1:numPat
         j
-        
         if regularPatching
-            regPat.imSize = size(im);
-            regPat.numPat = numPat;
-            regPat.patSize = patSize;
-            [thisRect rects] = prepRegularPatches(regPat, j);
+            [rect rects] = prepRegularPatches(regPat, j);
         else
-        [ rect] = prepPatches(im, patSize);
+            [ rect] = prepPatches(im, patSize);
         end
         origPat = imcrop(im, rect);
         normPat = imcrop(imNorm, rect);
