@@ -32,6 +32,9 @@ function face2dto3d_CSHA
 
 fprintf('\n');
 
+mystream = RandStream('mt19937ar','Seed',sum(100*clock));
+RandStream.setDefaultStream(mystream);
+
 %-----------------------------------------------------------------------------------------------------------------------
 
 % Edit this section to supply script parameters.
@@ -41,20 +44,22 @@ else
     dataPath = '/gpfs/home/aarslan/work/PART_staticFaceDataBase';
 end
 
-addpath('/Users/aarslan/Documents/MATLAB/cns/hmax/face_lfw')
-p = hmax_cvpr06_params_full_lfw;  % Model configuration to use.  Note that this script assumes that the only stage having
+%addpath('/Users/aarslan/Documents/MATLAB/cns/hmax/face_lfw')
+%p = hmax_cvpr06_params_full_lfw;  % Model configuration to use.  Note that this script assumes that the only stage having
 
 
 numFeatures = 4096;           % Number of S2 features to learn.
-numPat = 10;
+numPat = 10000;
 patSize = 50;
-downSamSiz = [13 13];
+downSamSiz = [9 9];
 oriMode = 1;                    % 1= mean orientation in the patch, else = mid point in the patch
-numPics = 2000;                  %numel(origPicPaths)
+numPics = 1;                  %numel(origPicPaths)
 numTrain    = 8;             % Number of training images per category.
 maxTest     = inf;            % Maximum number of test images per category.
 minSetSize  = 15;              % minimum number of images for a person required to include that person in the classification.
 okBands     = 2:2:8;
+regularPatching = 1;
+
 
 %-----------------------------------------------------------------------------------------------------------------------
 
@@ -74,22 +79,26 @@ normPicPaths = cellfun(@(paths,pics) [paths '/' pics(1:end)], normPicPaths(:,1),
 %-----------------------------------------------------------------------------------------------------------------------
 
 load filters.mat
-         rot = linspace(0, 180, 13);
-         RF_siz    = [7:2:39];
-         Div       = linspace(4,3.2,numel(RF_siz));%[4:-.05:3.2];
-         display('Initializing gabor filters -- full set...');
-         %creates the gabor filters use to extract the S1 layer
-         [fSiz,filters,c1OL,numSimpleFilters] = init_gabor(rot, RF_siz, Div);
+rot = linspace(0, 180, 13);
+RF_siz    = [7:2:39];
+Div       = linspace(4,3.2,numel(RF_siz));%[4:-.05:3.2];
+display('Initializing gabor filters -- full set...');
+%creates the gabor filters use to extract the S1 layer
+[fSiz,filters,c1OL,numSimpleFilters] = init_gabor(rot, RF_siz, Div);
 
 s1vec = cell(numPics, numPat, numel(rot));
 truth = cell(numPics, numPat);
+rects = cell(numPics, numPat);
 origPats  = cell(numPics, numPat);
 
-randomizer = randperm(numPics);
+randomizer = randperm(numel(origPicPaths));
 
-parfor i = 1:numPics
+
+
+
+for i = 1:numPics
     
-    fprintf('%u/%u: computing s1 vector for %s\n', i, numPics, origPicPaths{i});
+    fprintf('%u/%u: computing s1 vector for %s\n', i, numPics, origPicPaths{randomizer(i)});
     
     im = imread(origPicPaths{randomizer(i)});
     imNorm = imread(normPicPaths{randomizer(i)});
@@ -97,18 +106,29 @@ parfor i = 1:numPics
     [ s1] = getS1C1_legacy(im, fSiz,filters,c1OL,numSimpleFilters );
     
     for j=1:numPat
-        [rect] = prepPatches(im, patSize);
+        j
+        
+        if regularPatching
+            regPat.imSize = size(im);
+            regPat.numPat = numPat;
+            regPat.patSize = patSize;
+            [thisRect ~] = prepRegularPatches(regPat, j);
+        else
+        [ rect] = prepPatches(im, patSize);
+        end
         origPat = imcrop(im, rect);
         normPat = imcrop(imNorm, rect);
         [x y z] = getAveOri(normPat, oriMode);
         truth{i,j} = [x, y , z];
         s1vec(i,j,:) = vectorizeS1(s1,rect, okBands, downSamSiz);
         origPats{i,j} = imresize(origPat, downSamSiz);
+        rects{i,j} = rect;
     end
+    clear s1
 end
 size(origPats);
 try
-save('results_lessBands.mat', 's1vec', 'truth', 'origPats', 'randomizer')
+    save('results_oneFace.mat', 's1vec', 'truth', 'origPats', 'randomizer')
 catch
     save('sictim.mat')
 end
@@ -136,9 +156,9 @@ function [ rect] = prepPatches(im, patSize, varargin)
 
 if nargin == 2
     imSize = size(im);
-%     if any(patSize > imSize/3)
-%         error('patch size too big')
-%     end
+    %     if any(patSize > imSize/3)
+    %         error('patch size too big')
+    %     end
     invalidCrop = 1;
     while invalidCrop
         rect = [randi(imSize(1)-patSize), randi(imSize(2)-patSize), patSize, patSize];
@@ -148,20 +168,41 @@ if nargin == 2
         else
             break
         end
-
+        
     end
-else
-    pat = imcrop(im, varargin{1});
-    rect = varargin{1};
 end
 
+end
+
+
+function [thisRect rects] = prepRegularPatches(regPar, it)
+
+
+pro=regPar.numPat+1;
+w = regPar.imSize(1);
+h = regPar.imSize(2);
+y=1;
+while pro >= regPar.numPat
+    pro = (700-y)*(600-y);
+    y=y+1;
+end
+wArr = ceil(linspace(regPar.patSize/2, w-regPar.patSize/2, w-y));
+hArr = ceil(linspace(regPar.patSize/2, h-regPar.patSize/2, h-y));
+cnt = 1;
+for ws=1: w-y
+    for hs=1: h-y
+        rects{cnt} = [wArr(ws) hArr(hs)];
+        cnt=cnt+1;
+    end
+end
+thisRect = rects{it};
 end
 
 function s1vec_lol = vectorizeS1(s1, rect, okBands,downSamSiz)
 hmm = cellfun(@(x)[x{:}], s1, 'UniformOutput', 0 );
 for band=1:numel(hmm)
     for ori=1:numel(hmm{band})/2
-         pat = hmm{band}{ori} + hmm{band}{ori+numel(hmm{band})/2};
+        pat = hmm{band}{ori} + hmm{band}{ori+numel(hmm{band})/2};
         s1vec{ori}{band} = imresize(imcrop(pat, rect), downSamSiz);
     end
 end
@@ -199,5 +240,5 @@ end
 
 function doRegression(normOri , trainOri)
 model = svmtrain(normOri , trainOri, '-s 3 -t 2')
-[y_hat,  Acc,projection] = svmpredict(valdata.y,valdata.X, model);  
+[y_hat,  Acc,projection] = svmpredict(valdata.y,valdata.X, model);
 end
