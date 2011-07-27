@@ -41,8 +41,8 @@ else
     dataPath = '/gpfs/home/aarslan/work/PART_staticFaceDataBase';
 end
 
-addpath('/Users/aarslan/Documents/MATLAB/cns/hmax/face_lfw')
-p = hmax_cvpr06_params_full_lfw;  % Model configuration to use.  Note that this script assumes that the only stage having
+%addpath('/Users/aarslan/Documents/MATLAB/cns/hmax/face_lfw')
+%p = hmax_cvpr06_params_full_lfw;  % Model configuration to use.  Note that this script assumes that the only stage having
 
 
 numFeatures = 4096;           % Number of S2 features to learn.
