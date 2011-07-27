@@ -46,11 +46,11 @@ p = hmax_cvpr06_params_full_lfw;  % Model configuration to use.  Note that this 
 
 
 numFeatures = 4096;           % Number of S2 features to learn.
-numPat = 5;
+numPat = 10;
 patSize = 50;
-downSamSiz = [13 13];
+downSamSiz = [9 9];
 oriMode = 1;                    % 1= mean orientation in the patch, else = mid point in the patch
-numPics = 500;                  %numel(origPicPaths)
+numPics = 1500;                  %numel(origPicPaths)
 numTrain    = 8;             % Number of training images per category.
 maxTest     = inf;            % Maximum number of test images per category.
 minSetSize  = 15;              % minimum number of images for a person required to include that person in the classification.
