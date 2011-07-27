@@ -39,24 +39,29 @@ type = 'function estimation';
 
 dataMat = [ones(size(dataMat,1),1) dataMat]; %added bias term
 
-%truthMat = zscore(truthMat,0,1);
-
-
 X = dataMat(trainInd,:);
 Y =  truthMat(trainInd,:);
 Xtest = dataMat(testInd,:);
 Ytest = truthMat(testInd,:);
 
-[B, bint, r, rint, STATS]=regress(Y(:,or),X, 0.001);
-regressStats.bint = bint;
-regressStats.r = r;
-regressStats.rint = rint;
-regressStats.STATS = STATS;
-res.regressStats = regressStats;
 
-YhatTra=X*B;
+if p.matRegress
+    [B, bint, r, rint, STATS]=regress(Y(:,or),X, 0.001);
+    regressStats.bint = bint;
+    regressStats.r = r;
+    regressStats.rint = rint;
+    regressStats.STATS = STATS;
+    res.regressStats = regressStats;
+    
+    YhatTest=Xtest*B;
+    YhatTra=X*B;
+else
+    [alpha,B] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
+    YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},Xtest); 
+    YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
+end
 
-YhatTest=Xtest*B;
+
 
 res.Ymean = mean(Y);
 
@@ -96,10 +101,6 @@ res.Ytest = Ytest;
 % model = initlssvm(X,Y,type,gam, sig2,'RBF_kernel');
 % model = trainlssvm(model);
 
-% [alpha,b] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
-% Ytest = simlssvm({dataMat(trainInd,end-1000:end), truthMat(trainInd,:),type,gam,sig2,'RBF_kernel'},{alpha,b},dataMat(testInd,end-1000:end));
-% 
-
 
 
 % d = data( dataMat(trainInd,end-1000:end), truthMat(trainInd,:));
@@ -119,7 +120,8 @@ end
 
 function  params = makeParam
 params.ratio = 0.75;
-params.totalPics = 1500; %total number of pics to use
+params.totalPics = 15; %total number of pics to use
+params.matRegress = 0;
 end
 
 function errz = getMSE(dact,dpred)
