@@ -17,7 +17,7 @@ end
 
 ehe = reshape(sum(sums,2), numPat, []); %average over patches
 [C I] = min(mean(ehe));
-goodInd = numel(results{1,1}.YhatTra)+I;
+goodInd = numel(results{1,1}.YhatTra)/numPat+I;
 picInd = randomizer(goodInd);
 indInOrigPat = picInd;
 
@@ -31,7 +31,7 @@ origDirs = dir([dataPath '/*orig.png']);
 
 origPicPaths = [repmat({dataPath}, numel(origDirs),1),{origDirs.name}'];
 origPicPaths = cellfun(@(paths,pics) [paths '/' pics(1:end)], origPicPaths(:,1), origPicPaths(:,2),'uni',false);
-origPicPaths{picInd};
+picPath = origPicPaths{picInd};
 
 end
 

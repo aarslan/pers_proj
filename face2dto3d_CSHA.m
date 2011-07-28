@@ -28,7 +28,7 @@
 %     if ans(1) == 'n', return; end
 % end
 
-function face2dto3d_CSHA
+function face2dto3d_CSHA(varargin)
 
 fprintf('\n');
 
@@ -94,6 +94,8 @@ origPats  = cell(numPics, numPat);
 randomizer = randperm(numel(origPicPaths));
 
 if regularPatching
+    results = varargin{1};
+    randomizer = varargin{2};
 [patOfPic randomizer] = pickBestFace(results, randomizer);
 end
 
@@ -194,7 +196,7 @@ for ws=1: w-y
         cnt=cnt+1;
     end
 end
-thisRect = rects{it};
+thisRect = [rects{it} regPar.patSize regPar.patSize];
 end
 
 function s1vec_lol = vectorizeS1(s1, rect, okBands,downSamSiz)

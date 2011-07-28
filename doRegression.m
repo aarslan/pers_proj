@@ -41,9 +41,14 @@ dataMat = [ones(size(dataMat,1),1) dataMat]; %added bias term
 
 X = dataMat(trainInd,:);
 Y =  truthMat(trainInd,:);
+
+if ~p.singlePic
 Xtest = dataMat(testInd,:);
 Ytest = truthMat(testInd,:);
-
+else
+    load results_oneFace.mat
+    display('loaded features for single pic');
+end
 
 if p.matRegress
     [B, bint, r, rint, STATS]=regress(Y(:,or),X, 0.001);
@@ -55,10 +60,12 @@ if p.matRegress
     
     YhatTest=Xtest*B;
     YhatTra=X*B;
+    res.MSE = getMSE(Ytest(:,or), YhatTest);
+    display(sprintf('mean sq error: %f', res.MSE))
 else
     [alpha,B] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
     YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},Xtest); 
-    YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
+    YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
 end
 
 
@@ -71,8 +78,8 @@ display(sprintf('training error: %f', res.CorrTra))
 res.CorrTest = corr(Ytest(:,or), YhatTest);
 display(sprintf('test error: %f', res.CorrTest))
 
-res.MSE = getMSE(Ytest(:,or), YhatTest);
-display(sprintf('mean sq error: %f', res.MSE))
+
+
 
 res.YhatTra = YhatTra;
 res.YhatTest = YhatTest;
@@ -119,9 +126,10 @@ end
 
 
 function  params = makeParam
-params.ratio = 0.75;
-params.totalPics = 15; %total number of pics to use
-params.matRegress = 0;
+params.ratio = 0.95;
+params.totalPics = 1; %total number of pics to use
+params.matRegress = 1;
+params.singlePic = 1;
 end
 
 function errz = getMSE(dact,dpred)
