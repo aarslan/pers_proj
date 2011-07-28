@@ -1,0 +1,34 @@
+function picPath = pickBestFace(results)
+
+%lol = cellfun(@getDiff, results);
+
+for or=1:3
+    lol(or,:) = cellfun(@getDiff,results(or,:), repmat({or}, 1, 8), 'UniformOutput', 0);
+    
+end
+for cv=1:size(results,2)
+    sums(:,cv) = sum([lol{:,cv}],2);
+end
+
+[C I] = min(sum(sums,2));
+goodInd = numel(results{1,1}.YhatTra)+I;
+picInd = randomizer(goodInd);
+
+
+if strcmp(computer, 'MACI64')
+    dataPath = '/Users/aarslan/Dropbox/Blender Faces Database/Sample_Static_Database';                % Path where the Caltech 101 dataset can be found (*** required ***).
+else
+    dataPath = '/gpfs/home/aarslan/work/PART_staticFaceDataBase';
+end
+
+origDirs = dir([dataPath '/*orig.png']);
+
+origPicPaths = [repmat({dataPath}, numel(origDirs),1),{origDirs.name}'];
+origPicPaths = cellfun(@(paths,pics) [paths '/' pics(1:end)], origPicPaths(:,1), origPicPaths(:,2),'uni',false);
+origPicPaths{picInd};
+
+end
+
+function cellDiff = getDiff(aCell, or)
+    cellDiff = abs(aCell.YhatTest - aCell.Ytest(:,or));
+end
