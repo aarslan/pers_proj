@@ -1,6 +1,7 @@
 function picPath = pickBestFace(results, randomizer)
 
-%lol = cellfun(@getDiff, results);
+%NUMPAT ASSUMED TO BE 10
+numPat = 10;
 
 for or=1:3
     lol(or,:) = cellfun(@getDiff,results(or,:), repmat({or}, 1, 8), 'UniformOutput', 0);
@@ -12,9 +13,10 @@ end
 
 
 %%%%% WOWWW
-%plot(sort(sum(sums,2)))
+%plot(sort(sum(sums,2))) %same when you average all patches too!
 
-[C I] = min(sum(sums,2));
+ehe = reshape(sum(sums,2), numPat, []); %average over patches
+[C I] = min(mean(ehe));
 goodInd = numel(results{1,1}.YhatTra)+I;
 picInd = randomizer(goodInd);
 
