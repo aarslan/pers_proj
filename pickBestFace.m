@@ -1,4 +1,4 @@
-function picPath = pickBestFace(results, randomizer)
+function [picPath indInOrigPat] = pickBestFace(results, randomizer)
 
 %NUMPAT ASSUMED TO BE 10
 numPat = 10;
@@ -19,7 +19,7 @@ ehe = reshape(sum(sums,2), numPat, []); %average over patches
 [C I] = min(mean(ehe));
 goodInd = numel(results{1,1}.YhatTra)+I;
 picInd = randomizer(goodInd);
-
+indInOrigPat = picInd;
 
 if strcmp(computer, 'MACI64')
     dataPath = '/Users/aarslan/Dropbox/Blender Faces Database/Sample_Static_Database';                % Path where the Caltech 101 dataset can be found (*** required ***).

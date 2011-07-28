@@ -93,8 +93,9 @@ origPats  = cell(numPics, numPat);
 
 randomizer = randperm(numel(origPicPaths));
 
-
-
+if regularPatching
+[patOfPic randomizer] = pickBestFace(results, randomizer);
+end
 
 for i = 1:numPics
     
