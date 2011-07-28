@@ -1,4 +1,4 @@
-function picPath = pickBestFace(results)
+function picPath = pickBestFace(results, randomizer)
 
 %lol = cellfun(@getDiff, results);
 
@@ -9,6 +9,10 @@ end
 for cv=1:size(results,2)
     sums(:,cv) = sum([lol{:,cv}],2);
 end
+
+
+%%%%% WOWWW
+%plot(sort(sum(sums,2)))
 
 [C I] = min(sum(sums,2));
 goodInd = numel(results{1,1}.YhatTra)+I;
