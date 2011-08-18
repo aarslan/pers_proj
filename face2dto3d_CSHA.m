@@ -110,7 +110,7 @@ for i = 1:numPics
     regPat.imSize = size(im);
     regPat.numPat = numPat;
     regPat.patSize = patSize;
-    parfor j=1:numPat
+    for j=1:numPat
         j
         if regularPatching
             [rect rects] = prepRegularPatches(regPat, j);
