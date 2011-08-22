@@ -79,7 +79,7 @@ imData = struct('name', repmat({'-'}, PAR.numPics, 1), 'truth', [], 's1vec',[], 
 
 PAR.pSpec.imSize = size(imread(origPicPaths{randomizer(1)}));
 tic
-parfor ii = 1:PAR.numPics
+for ii = 1:PAR.numPics
     
     fprintf('%u/%u: computing s1 vector for %s\n', ii, PAR.numPics, origPicPaths{randomizer(ii)});
     
@@ -96,7 +96,7 @@ parfor ii = 1:PAR.numPics
     imData(ii).origPats = origPats;
     imData(ii).actRects  = actRects;
     imData(ii).name = origPicPaths{randomizer(ii)};
-    
+    display([ ''])
 end
 toc
 

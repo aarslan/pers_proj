@@ -79,7 +79,6 @@ for i = 1:length(uFiltSizes)
     s1Norm{uFiltSizes(i)} = s1Norm{uFiltSizes(i)} + ~s1Norm{uFiltSizes(i)};
 end
 
-s1 = cell(numScaleBands, length(ScalesInThisBand{1}), numSimpleFilters );
 for iBand = 1:numScaleBands
     for iScale = 1:length(ScalesInThisBand{iBand})
         for iFilt = 1:numSimpleFilters
