@@ -1,4 +1,4 @@
-function [c1,s1] = C1(stim, filters, fSiz, c1SpaceSS, c1ScaleSS, c1OL,INCLUDEBORDERS)
+function [s1] = C1(stim, filters, fSiz, c1SpaceSS, c1ScaleSS, c1OL,INCLUDEBORDERS)
 %function [c1,s1] = C1(stim, filters, fSiz, c1SpaceSS, c1ScaleSS, c1OL,INCLUDEBORDERS)
 %
 %  A matlab implementation of the C1 code originally by Max Riesenhuber
@@ -74,64 +74,67 @@ iUFilterIndex = 0;
 % precalculate the normalizations for the usable filter sizes
 uFiltSizes = unique(fSiz);
 for i = 1:length(uFiltSizes)
-  s1Norm{uFiltSizes(i)} = (sumfilter(sqim,(uFiltSizes(i)-1)/2)).^0.5;
-  %avoid divide by zero
-  s1Norm{uFiltSizes(i)} = s1Norm{uFiltSizes(i)} + ~s1Norm{uFiltSizes(i)};
+    s1Norm{uFiltSizes(i)} = (sumfilter(sqim,(uFiltSizes(i)-1)/2)).^0.5;
+    %avoid divide by zero
+    s1Norm{uFiltSizes(i)} = s1Norm{uFiltSizes(i)} + ~s1Norm{uFiltSizes(i)};
 end
 
+s1 = cell(numScaleBands, )
 for iBand = 1:numScaleBands
-   for iScale = 1:length(ScalesInThisBand{iBand})
-     for iFilt = 1:numSimpleFilters
-       iUFilterIndex = iUFilterIndex+1;
-       if ~USECONV2
-	 s1{iBand}{iScale}{iFilt} = abs(imfilter(stim,sqfilter{iUFilterIndex},'symmetric','same','corr'));
-
-	 if(~INCLUDEBORDERS)
-	   s1{iBand}{iScale}{iFilt} = removeborders(s1{iBand}{iScale}{iFilt},fSiz(iUFilterIndex));
-	 end
-	 s1{iBand}{iScale}{iFilt} = im2double(s1{iBand}{iScale}{iFilt}) ./ s1Norm{fSiz(iUFilterIndex)};
-       else %not 100% compatible but 20% faster at least
-	 s1{iBand}{iScale}{iFilt} = abs(conv2(stim,sqfilter{iUFilterIndex},'same'));
-	 if(~INCLUDEBORDERS)
-	   s1{iBand}{iScale}{iFilt} = removeborders(s1{iBand}{iScale}{iFilt},fSiz(iUFilterIndex));
-	 end
-	 s1{iBand}{iScale}{iFilt} = im2double(s1{iBand}{iScale}{iFilt}) ./ s1Norm{fSiz(iUFilterIndex)};
-       end
-     end
-   end
+    for iScale = 1:length(ScalesInThisBand{iBand})
+        for iFilt = 1:numSimpleFilters
+            iUFilterIndex = iUFilterIndex+1;
+            if ~USECONV2
+                s1{iBand}{iScale}{iFilt} = abs(imfilter(stim,sqfilter{iUFilterIndex},'symmetric','same','corr'));
+                
+                if(~INCLUDEBORDERS)
+                    s1{iBand}{iScale}{iFilt} = removeborders(s1{iBand}{iScale}{iFilt},fSiz(iUFilterIndex));
+                end
+                s1{iBand}{iScale}{iFilt} = im2double(s1{iBand}{iScale}{iFilt}) ./ s1Norm{fSiz(iUFilterIndex)};
+            else %not 100% compatible but 20% faster at least
+                stim = single(stim);
+%                stim = padarray(stim, size(sqfilter{iUFilterIndex}), 'symmetric'); %ALI
+                s1{iBand}{iScale}{iFilt} = abs(conv2(stim,sqfilter{iUFilterIndex},'same'));
+                if(~INCLUDEBORDERS)
+                    s1{iBand}{iScale}{iFilt} = removeborders(s1{iBand}{iScale}{iFilt},fSiz(iUFilterIndex));
+                end
+                s1{iBand}{iScale}{iFilt} = im2double(s1{iBand}{iScale}{iFilt}) ./ s1Norm{fSiz(iUFilterIndex)};
+            end
+        end
+    end
 end
 
 
 % Calculate local pooling (c1)
 %%%%%%%%
-
-  (1) pool over scales within band
-for iBand = 1:numScaleBands
-  for iFilt = 1:numSimpleFilters
-    c1{iBand}(:,:,iFilt) = zeros(size(s1{iBand}{1}{iFilt}));
-    for iScale = 1:length(ScalesInThisBand{iBand});
-      c1{iBand}(:,:,iFilt) = max(c1{iBand}(:,:,iFilt),s1{iBand}{iScale}{iFilt});
-    end
-  end
-end
-
-  (2) pool over local neighborhood
-for iBand = 1:numScaleBands
-  poolRange = (c1SpaceSS(iBand));
-  for iFilt = 1:numSimpleFilters
-    c1{iBand}(:,:,iFilt) = maxfilter(c1{iBand}(:,:,iFilt),[0 0 poolRange-1 poolRange-1]);
-  end
-end
-
-
-  (3) subsample
-for iBand = 1:numScaleBands
-  sSS=ceil(c1SpaceSS(iBand)/c1OL);
-  clear T;
-  for iFilt = 1:numSimpleFilters
-    T(:,:,iFilt) = c1{iBand}(1:sSS:end,1:sSS:end,iFilt);
-  end
-  c1{iBand} = T;
+% 
+% %   (1) pool over scales within band
+% for iBand = 1:numScaleBands
+%   for iFilt = 1:numSimpleFilters
+%     c1{iBand}(:,:,iFilt) = zeros(size(s1{iBand}{1}{iFilt}));
+%     for iScale = 1:length(ScalesInThisBand{iBand});
+%       c1{iBand}(:,:,iFilt) = max(c1{iBand}(:,:,iFilt),s1{iBand}{iScale}{iFilt});
+%     end
+%   end
+% end
+% 
+% %   (2) pool over local neighborhood
+% for iBand = 1:numScaleBands
+%   poolRange = (c1SpaceSS(iBand));
+%   for iFilt = 1:numSimpleFilters
+%     c1{iBand}(:,:,iFilt) = maxfilter(c1{iBand}(:,:,iFilt),[0 0 poolRange-1 poolRange-1]);
+%   end
+% end
+% 
+% 
+% %   (3) subsample
+% for iBand = 1:numScaleBands
+%   sSS=ceil(c1SpaceSS(iBand)/c1OL);
+%   clear T;
+%   for iFilt = 1:numSimpleFilters
+%     T(:,:,iFilt) = c1{iBand}(1:sSS:end,1:sSS:end,iFilt);
+%   end
+%   c1{iBand} = T;
 end
 
 
@@ -139,5 +142,6 @@ function sout = removeborders(sin,siz)
 sin = unpadimage(sin, [(siz+1)/2,(siz+1)/2,(siz-1)/2,(siz-1)/2]);
 sin = padarray(sin, [(siz+1)/2,(siz+1)/2],0,'pre');
 sout = padarray(sin, [(siz-1)/2,(siz-1)/2],0,'post');
+end
        
 

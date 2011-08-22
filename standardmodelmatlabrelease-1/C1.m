@@ -74,31 +74,32 @@ iUFilterIndex = 0;
 % precalculate the normalizations for the usable filter sizes
 uFiltSizes = unique(fSiz);
 for i = 1:length(uFiltSizes)
-  s1Norm{uFiltSizes(i)} = (sumfilter(sqim,(uFiltSizes(i)-1)/2)).^0.5;
-  %avoid divide by zero
-  s1Norm{uFiltSizes(i)} = s1Norm{uFiltSizes(i)} + ~s1Norm{uFiltSizes(i)};
+    s1Norm{uFiltSizes(i)} = (sumfilter(sqim,(uFiltSizes(i)-1)/2)).^0.5;
+    %avoid divide by zero
+    s1Norm{uFiltSizes(i)} = s1Norm{uFiltSizes(i)} + ~s1Norm{uFiltSizes(i)};
 end
 
+s1 = cell(numScaleBands, length(ScalesInThisBand{1}), numSimpleFilters );
 for iBand = 1:numScaleBands
-   for iScale = 1:length(ScalesInThisBand{iBand})
-     for iFilt = 1:numSimpleFilters
-       iUFilterIndex = iUFilterIndex+1;
-       if ~USECONV2
-	 s1{iBand}{iScale}{iFilt} = abs(imfilter(stim,sqfilter{iUFilterIndex},'symmetric','same','corr'));
-
-	 if(~INCLUDEBORDERS)
-	   s1{iBand}{iScale}{iFilt} = removeborders(s1{iBand}{iScale}{iFilt},fSiz(iUFilterIndex));
-	 end
-	 s1{iBand}{iScale}{iFilt} = im2double(s1{iBand}{iScale}{iFilt}) ./ s1Norm{fSiz(iUFilterIndex)};
-       else %not 100% compatible but 20% faster at least
-	 s1{iBand}{iScale}{iFilt} = abs(conv2(stim,sqfilter{iUFilterIndex},'same'));
-	 if(~INCLUDEBORDERS)
-	   s1{iBand}{iScale}{iFilt} = removeborders(s1{iBand}{iScale}{iFilt},fSiz(iUFilterIndex));
-	 end
-	 s1{iBand}{iScale}{iFilt} = im2double(s1{iBand}{iScale}{iFilt}) ./ s1Norm{fSiz(iUFilterIndex)};
-       end
-     end
-   end
+    for iScale = 1:length(ScalesInThisBand{iBand})
+        for iFilt = 1:numSimpleFilters
+            iUFilterIndex = iUFilterIndex+1;
+            if ~USECONV2
+                s1{iBand}{iScale}{iFilt} = abs(imfilter(stim,sqfilter{iUFilterIndex},'symmetric','same','corr'));
+                
+                if(~INCLUDEBORDERS)
+                    s1{iBand}{iScale}{iFilt} = removeborders(s1{iBand}{iScale}{iFilt},fSiz(iUFilterIndex));
+                end
+                s1{iBand}{iScale}{iFilt} = im2double(s1{iBand}{iScale}{iFilt}) ./ s1Norm{fSiz(iUFilterIndex)};
+            else %not 100% compatible but 20% faster at least
+                s1{iBand}{iScale}{iFilt} = abs(conv2(stim,sqfilter{iUFilterIndex},'same'));
+                if(~INCLUDEBORDERS)
+                    s1{iBand}{iScale}{iFilt} = removeborders(s1{iBand}{iScale}{iFilt},fSiz(iUFilterIndex));
+                end
+                s1{iBand}{iScale}{iFilt} = im2double(s1{iBand}{iScale}{iFilt}) ./ s1Norm{fSiz(iUFilterIndex)};
+            end
+        end
+    end
 end
 
 

@@ -26,14 +26,21 @@ end
 %p = hmax_cvpr06_params_full_lfw;  % Model configuration to use.  Note that this script assumes that the only stage having
 
 
-numPat = 10;
-patSize = 50;
-downSamSiz = [9 9];
-oriMode = 1;                    % 1= mean orientation in the patch, else = mid point in the patch
-numPics = 1;                  %numel(origPicPaths)
-okBands     = 2:2:8;
-regularPatching = 0;
-patMode = 1;
+PAR.numPat      = 25;
+PAR.downSamSiz  = 9;
+PAR.oriMode     = 1;                    % 1= mean orientation in the patch, else = mid point in the patch
+PAR.numPics     = 200;                  %numel(origPicPaths)
+PAR.okBands     = 2:2:8;
+PAR.regularPatching = 0;
+PAR.patMode = 1;
+PAR.runMode = runMode;
+
+pSpec.imSize = 0; %will be written later on
+pSpec.patSize = 50;
+pSpec.patMode = 0; %patch mode: 0 random; 1 regular spaced.
+pSpec.numPat = PAR.numPat;
+
+PAR.pSpec = pSpec;
 
 %-----------------------------------------------------------------------------------------------------------------------
 origDirs = dir([dataPath '/*orig.png']);
@@ -55,56 +62,57 @@ display('Initializing gabor filters -- full set...');
 %creates the gabor filters use to extract the S1 layer
 [fSiz,filters,c1OL,numSimpleFilters] = init_gabor(rot, RF_siz, Div);
 
-s1vec = cell(numPics, numPat, numel(rot));
-truth = cell(numPics, numPat);
-origPats  = cell(numPics, numPat);
 
+
+if runMode
+    PAR.numPics     = 1;  
+    PAR.pSpec.patMode = 1; %patch mode: 0 random; 1 regular spaced.
+    load regr_results.mat
+    [patOfPic randomizer] = pickBestFace(results);
+    clear results
+end
+
+origPats  = cell(PAR.numPics, PAR.numPat);
 randomizer = randperm(numel(origPicPaths));
 
-if regularPatching
-    results = varargin{1};
-    randomizer = varargin{2};
-[patOfPic randomizer] = pickBestFace(results, randomizer);
-end
+imData = struct('name', repmat({'-'}, PAR.numPics, 1), 'truth', [], 's1vec',[], 'origPats', [], 'actRects', [] );
 
-
-for i = 1:numPics
+PAR.pSpec.imSize = size(imread(origPicPaths{randomizer(1)}));
+tic
+parfor ii = 1:PAR.numPics
     
-    fprintf('%u/%u: computing s1 vector for %s\n', i, numPics, origPicPaths{randomizer(i)});
+    fprintf('%u/%u: computing s1 vector for %s\n', ii, PAR.numPics, origPicPaths{randomizer(ii)});
     
-    im = imread(origPicPaths{randomizer(i)});
-    imNorm = imread(normPicPaths{randomizer(i)});
+    im = imread(origPicPaths{randomizer(ii)});
+    imNorm = imread(normPicPaths{randomizer(ii)});
     im = rgb2gray(im);
+    %PAR.pSpec.imSize = size(im);
     [ s1] = getS1C1_legacy(im, fSiz,filters,c1OL,numSimpleFilters );
     
-    pSpec.imSize = size(im);
-    pSpec.patSize = patSize;
-    pSpec.patMode = patMode; %patch mode: 0 random; 1 regular spaced.
-    pSpec.numPat = numPat;
+    [rects] = prepAllPatches(PAR.pSpec);
+    [truth s1vec origPats actRects] = prepValidPatches(im, imNorm, s1, PAR, rects);
+    imData(ii).truth    = truth;
+    imData(ii).s1vec    = s1vec;
+    imData(ii).origPats = origPats;
+    imData(ii).actRects  = actRects;
+    imData(ii).name = origPicPaths{randomizer(ii)};
     
-    [ rects] = prepAllPatches(pSpec);
-    
-    for j=1:numPat
-        j
-        
-%         if regularPatching
-%             [rect rects] = prepRegularPatches(regPat, j);
-%         else
-%             [ rect] = prepPatches(im, patSize);
-%         end
-        origPat = imcrop(im, rect);
-        normPat = imcrop(imNorm, rect);
-        [x y z] = getAveOri(normPat, oriMode);
-        truth{i,j} = [x, y , z];
-        s1vec(i,j,:) = vectorizeS1(s1,rect, okBands, downSamSiz);
-        origPats{i,j} = imresize(origPat, downSamSiz);
-        rects{i,j} = rect;
-    end
-    clear s1
 end
-size(origPats);
+toc
+
+if ~runMode
+    matName = 'patchesAll.mat';
+else
+    [~, name, ext] = fileparts(origPicPaths{1}); 
+    matName = [name '_patches.mat' ];
+end
+
+PAR.origDirs = origDirs;
+PAR.normDirs = normDirs;
+
+
 try
-    save('results_oneFace.mat', 's1vec', 'truth', 'origPats', 'randomizer', 'rects')
+    save(matName, 'imData', 'PAR', '-v7.3')
 catch
     save('sictim.mat')
 end
@@ -114,115 +122,103 @@ end
 function [ s1vec] = getS1C1_legacy(im, fSiz,filters,c1OL,~)
 c1ScaleSS = 1:2:18;
 c1SpaceSS = 8:2:22;
-[s1vec] = C1(im, filters, fSiz, c1SpaceSS, c1ScaleSS, c1OL, 1);
+[s1vec] = C1(im, filters, fSiz, c1SpaceSS, c1ScaleSS, c1OL, 0);
 
 end
 
 function [ rects] = prepAllPatches(pSpec)
 imSize  = pSpec.imSize;
 patSize = pSpec.patSize;
-patMode   = pSpec.patMode; %patch mode: 0 random; 1 regular spaced.
+patMode = pSpec.patMode; %patch mode: 0 random; 1 regular spaced.
 numPat  = pSpec.numPat;
-
-rects = zeros(numPat,4);
-
 switch patMode
     case 0
-        rects(:,1) = randi(imSize(1) - patSize,numPat,1);
-        rects(:,2) = randi(imSize(2) - patSize,numPat,1);
+        numPat  = pSpec.numPat*5; %create 5 times more patches than necessary
+        rects = zeros(numPat,4);
+        rects(:,2) = randi(imSize(1) - patSize,numPat,1);   %%%WOT, WHY DO I HAE TO CROSS W and H?
+        rects(:,1) = randi(imSize(2) - patSize,numPat,1);
     case 1
-        
+        rects = zeros(numPat,4);
         facts = imSize/min(imSize); %create a series of pairs to find the ratios for edges
         veli = repmat(facts, [], prod(imSize));
         ali= repmat(1:prod(imSize), [], 2)';
         
-        axsDims = ceil((find(prod(ali.*veli,2) <= numPat,1, 'last')) *facts);
+        axsDims = ceil((find(prod(ali.*veli,2) <= PAR.numPat,1, 'last')) *facts);
         
-        if (axsDims(1)+1)* axsDims(2) <= numPat %check if we can increase the number a bit more
-            axsDims = [axsDims(1)+1 axsDims(2)];
-        elseif (axsDims(2)+1)* axsDims(1) <= numPat
+        if (axsDims(2)+1)* axsDims(1) <= PAR.numPat
             axsDims = [axsDims(1) axsDims(2)+1];
+        elseif (axsDims(1)+1)* axsDims(2) <= PAR.numPat %check if we can increase the number a bit more
+            axsDims = [axsDims(1)+1 axsDims(2)];
         end
         
-        [x y] = meshgrid(linspace(1, imSize(1)-patSize, axsDims(1)), linspace(1, imSize(2)axsDims(2)-patSize); % create xy pairs
+        [x y] = meshgrid(linspace(1, imSize(1)-patSize, axsDims(1)), linspace(1, imSize(2)-patSize, axsDims(2))); % create xy pairs
         finNumP = prod(axsDims);
         
         rects(1:finNumP,1:2) = [x(1:finNumP); y(1:finNumP)]'; %put in rect & trim
-        rects = rects(1:finNumP,:);
-        if finNumP ~= numPat
-            warning(sprintf('you wanted %d patches, but I could fit in only %d', numPat,  finNumP ))
+        
+        if finNumP ~= PAR.numPat
+            warning(sprintf('you wanted %d patches, but I could fit in only %d', PAR.numPat,  finNumP ))
         end
 end
-
 rects(:,3) = patSize;
 rects(:,4) = patSize;
-
 end
 
 
-function [ rect] = prepPatches(im, patSize, varargin)
-%patSize: the edge size of a square patch
-%varargin is there for optional argument rect (when doing a specified crop on a separate image)
+function  [truth s1vec origPats actRect] = prepValidPatches(im, imNorm, s1, PAR, rects)
+numPat      = size(rects, 1);
+truth       = zeros(numPat, 3);
+origPats    = zeros(numPat, PAR.downSamSiz, PAR.downSamSiz);
+actRects    = zeros(numPat, 4);
+s1vec       = cell(numPat,1);
+% DONT KNOW THE SIZE OF s1vec !!!!!!!!!!!!!!!
+%warning('figure out a way to calculate s1vec size and preallocate')
 
-if nargin == 2
-    imSize = size(im);
-    %     if any(patSize > imSize/3)
-    %         error('patch size too big')
-    %     end
+cnt = 1;
+for j=1:numPat
+    
     invalidCrop = 1;
     while invalidCrop
-        rect = [randi(imSize(1)-patSize), randi(imSize(2)-patSize), patSize, patSize];
-        pat = imcrop(im, rect);
-        if (numel(find(pat == 0)) > (patSize^2)/3) || numel(pat) ~= (patSize+1)^2 %make sure that cropped section doesn't cover a lot of background.
-            invalidCrop = 1;
-        else
+        rect = rects(j,:);
+        origPat = imcrop(im, rect);
+        
+        if ~((numel(find(origPat == 0)) > (PAR.pSpec.patSize^2)/3) || numel(origPat) ~= (PAR.pSpec.patSize+1)^2) || ~isempty(origPat) %make sure that cropped section doesn't cover a lot of background.
+            normPat = imcrop(imNorm, rect);
+            [x y z] = getAveOri(normPat, PAR.oriMode);
+            truth(cnt,:) = [x y z];
+            s1vec{cnt} = vectorizeS1(s1,rect, PAR);
+            origPats(cnt,:,:) = imresize(origPat, [PAR.downSamSiz, PAR.downSamSiz] );
+            actRects(cnt,:) = rect;
+            cnt = cnt+1;
+            invalidCrop = 0;
             break
         end
-        
+    end
+    if cnt-1 == PAR.pSpec.numPat
+        break
     end
 end
-
+cnt = cnt-1;
+truth    = truth(1:cnt,:);
+s1vec    = s1vec(1:cnt); 
+origPats = origPats(1:cnt,:,:);
+actRect  = actRects(1:cnt,:);
 end
 
 
-
-
-function [thisRect rects] = prepRegularPatches(regPar, it)
-
-
-pro=regPar.numPat+1;
-w = regPar.imSize(1);
-h = regPar.imSize(2);
-y=1;
-while pro >= regPar.numPat
-    pro = (700-y)*(600-y);
-    y=y+1;
-end
-wArr = ceil(linspace(regPar.patSize/2, w-regPar.patSize/2, w-y)); %use meshgrid
-hArr = ceil(linspace(regPar.patSize/2, h-regPar.patSize/2, h-y));
-cnt = 1;
-for ws=1: w-y
-    for hs=1: h-y
-        rects{cnt} = [wArr(ws) hArr(hs)];
-        cnt=cnt+1;
-    end
-end
-thisRect = [rects{it} regPar.patSize regPar.patSize];
-end
-
-function s1vec_lol = vectorizeS1(s1, rect, okBands,downSamSiz)
+function s1vec_lol = vectorizeS1(s1, rect, PAR)
 hmm = cellfun(@(x)[x{:}], s1, 'UniformOutput', 0 );
 for band=1:numel(hmm)
     for ori=1:numel(hmm{band})/2
         pat = hmm{band}{ori} + hmm{band}{ori+numel(hmm{band})/2};
-        s1vec{ori}{band} = imresize(imcrop(pat, rect), downSamSiz);
+        s1vec{ori}{band} = imresize(imcrop(pat, rect), [PAR.downSamSiz PAR.downSamSiz]);
     end
 end
 
-for band=1:numel(okBands)
+for band=1:numel(PAR.okBands)
     for ori=1:numel(hmm{band})/2
         temp = cellfun(@(a)reshape(a, prod(size(a)),1 ), s1vec{ori}, 'UniformOutput', 0);
-        eheh =[temp{okBands}];
+        eheh =[temp{PAR.okBands}];
         s1vec_lol{ori}= (reshape(eheh, numel(eheh), 1)); %%%do I need to transpose during reshape??
     end
 end

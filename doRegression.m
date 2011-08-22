@@ -68,8 +68,6 @@ else
     YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
 end
 
-
-
 res.Ymean = mean(Y);
 
 res.CorrTra = corr(Y(:,or), YhatTra);
@@ -79,49 +77,9 @@ res.CorrTest = corr(Ytest(:,or), YhatTest);
 display(sprintf('test error: %f', res.CorrTest))
 
 
-
-
 res.YhatTra = YhatTra;
 res.YhatTest = YhatTest;
 res.Ytest = Ytest;
-% IMRI's solution
-%beta = Y\X;
-%Yimri = Xtest*beta';
-
-
-%singe value
-% betaTra = Y(:,1)\X;
-% YTra = X*betaTra';
-% errzTra = getMSE(Y,YTra);
-% Ymean = mean(Y);
-% 
-% betaTest = Y(:,1)\X;
-% YTest = Xtest*betaTest';
-% errzTest = getMSE(Y,YTest);
-% Ymean = mean(Y);
-% 
-% errz = getMSE(Ytest,Yimri);
-% Ymean = mean(Ytest);
-% 
-% 
-% 
-% model = initlssvm(X,Y,type,gam, sig2,'RBF_kernel');
-% model = trainlssvm(model);
-
-
-
-% d = data( dataMat(trainInd,end-1000:end), truthMat(trainInd,:));
-% d2 = data( dataMat(testInd,end-1000:end), truthMat(testInd,:));
-% 
-% a=multi_reg(svr('C=10'))
-% [r,a]=train(a,d);
-% [sol]=test(a,d);
-
-%model = svmtrain( truthMat(trainInd,:), dataMat(trainInd,:) , '-s 3 -t 2');
-
-
-%[y_hat,  Acc,projection] = svmpredict(truthMat(testInd,:), dataMat(testInd,:), model);  
-
 end
 
 
