@@ -181,7 +181,7 @@ for j=1:numPat
     invalidCrop = 1;
     while invalidCrop
         rect = rects(j+joff,:);
-        j+joff
+        j+joff;
         origPat = imcrop(im, rect);
         joff = joff+1;
         if ~((numel(find(origPat == 0)) > (PAR.pSpec.patSize^2)/3) || numel(origPat) ~= (PAR.pSpec.patSize+1)^2) %make sure that cropped section doesn't cover a lot of background.
