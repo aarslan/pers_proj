@@ -1,27 +1,41 @@
 
-function res = doRegression(origPats, s1vec, truth, or)
+function res = doRegression(origPats, PAR, s1vec, truth, or)
 
-p = makeParam;
+p.ratio = 0.95; %training vs test ratio
+p.totalPics = NaN; %total number of pics to use
+p.matRegress = 1; %use matlab's built-in regression
+p.singlePic = 1; %
+p.nrmz = 1; %normalize the features between 0-1?
 
-randInd = randperm(p.totalPics*size(s1vec,2));
-sep = ceil(p.totalPics *size(s1vec,2)* p.ratio);
+if isnan(p.totalPics)
+    p.totalPics = PAR.numPics;
+end
+p.numPat = PAR.pSpec.numPat;
+p.NumObs = p.totalPics*p.numPat;
+
+randInd = randperm(p.NumObs);
+sep = ceil(p.NumObs * p.ratio);
 trainInd = randInd(1:sep);
 testInd = randInd(sep+1:end);
 
 %construct a 2D data array with these dimensions:
 % numObservation*numpatches X numOrientation*numPixels
-numPix = numel(s1vec{1,1,1});
-dataMat  = zeros(p.totalPics*size(s1vec,2), size(s1vec,3)*numPix);
-truthMat = zeros(p.totalPics*size(s1vec,2), 3);
+p.numPix = numel(imData(1,1).s1vec{1,1}{1,1});
+p.numOri = imData(1,1).s1vec{1,1};
+dataMat  = zeros(p.NumObs, p.numOri*p.numPix);
+truthMat = zeros(p.NumObs, 3);
 
 count = 1;
 for im=1:p.totalPics;
-    for pat=1:size(s1vec,2)
-        for ori=1:size(s1vec,3)
-            dataMat(count, (ori-1)*numPix+1: (ori*numPix)) = mat2gray(s1vec{im, pat, ori});
-            
+    for pat=1:p.numPat
+        for ori=1:p.numOri
+            if p.nrmz
+                dataMat(count, (ori-1)*numPix+1: (ori*numPix)) = mat2gray(imData(im).s1vec{pat}{ori});
+            else
+                dataMat(count, (ori-1)*numPix+1: (ori*numPix)) = imData(im).s1vec{pat}{ori};
+            end
         end
-        truthMat(count,:) = truth{im,pat};
+        truthMat(count,:) = imData(im).truth{im,pat};
         count = count+1;
     end
     
@@ -42,11 +56,12 @@ dataMat = [ones(size(dataMat,1),1) dataMat]; %added bias term
 X = dataMat(trainInd,:);
 Y =  truthMat(trainInd,:);
 
-if ~singlePic
+if ~p.singlePic
 Xtest = dataMat(testInd,:);
 Ytest = truthMat(testInd,:);
 else
-    load singlePicXY.m
+    load results_oneFace.mat
+    display('loaded features for single pic');
 end
 
 if p.matRegress
@@ -67,8 +82,6 @@ else
     YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
 end
 
-
-
 res.Ymean = mean(Y);
 
 res.CorrTra = corr(Y(:,or), YhatTra);
@@ -78,58 +91,11 @@ res.CorrTest = corr(Ytest(:,or), YhatTest);
 display(sprintf('test error: %f', res.CorrTest))
 
 
-
-
 res.YhatTra = YhatTra;
 res.YhatTest = YhatTest;
 res.Ytest = Ytest;
-% IMRI's solution
-%beta = Y\X;
-%Yimri = Xtest*beta';
-
-
-%singe value
-% betaTra = Y(:,1)\X;
-% YTra = X*betaTra';
-% errzTra = getMSE(Y,YTra);
-% Ymean = mean(Y);
-% 
-% betaTest = Y(:,1)\X;
-% YTest = Xtest*betaTest';
-% errzTest = getMSE(Y,YTest);
-% Ymean = mean(Y);
-% 
-% errz = getMSE(Ytest,Yimri);
-% Ymean = mean(Ytest);
-% 
-% 
-% 
-% model = initlssvm(X,Y,type,gam, sig2,'RBF_kernel');
-% model = trainlssvm(model);
-
-
-
-% d = data( dataMat(trainInd,end-1000:end), truthMat(trainInd,:));
-% d2 = data( dataMat(testInd,end-1000:end), truthMat(testInd,:));
-% 
-% a=multi_reg(svr('C=10'))
-% [r,a]=train(a,d);
-% [sol]=test(a,d);
-
-%model = svmtrain( truthMat(trainInd,:), dataMat(trainInd,:) , '-s 3 -t 2');
-
-
-%[y_hat,  Acc,projection] = svmpredict(truthMat(testInd,:), dataMat(testInd,:), model);  
-
 end
 
-
-function  params = makeParam
-params.ratio = 0.75;
-params.totalPics = 1; %total number of pics to use
-params.matRegress = 0;
-params.singlePic = 1;
-end
 
 function errz = getMSE(dact,dpred)
 errz = mean(dact - dpred).^2;

@@ -1,27 +1,41 @@
 
-function res = doRegression(origPats, s1vec, truth, or)
+function res = doRegression(imData, PAR, or)
 
-p = makeParam;
+p.ratio = 0.95; %training vs test ratio
+p.totalPics = NaN; %total number of pics to use
+p.matRegress = 1; %use matlab's built-in regression
+p.singlePic = 0; %
+p.nrmz = 1; %normalize the features between 0-1?
 
-randInd = randperm(p.totalPics*size(s1vec,2));
-sep = ceil(p.totalPics *size(s1vec,2)* p.ratio);
+if isnan(p.totalPics)
+    p.totalPics = PAR.numPics;
+end
+p.numPat = PAR.pSpec.numPat;
+p.NumObs = p.totalPics*p.numPat;
+
+randInd = randperm(p.NumObs);
+sep = ceil(p.NumObs * p.ratio);
 trainInd = randInd(1:sep);
 testInd = randInd(sep+1:end);
 
 %construct a 2D data array with these dimensions:
 % numObservation*numpatches X numOrientation*numPixels
-numPix = numel(s1vec{1,1,1});
-dataMat  = zeros(p.totalPics*size(s1vec,2), size(s1vec,3)*numPix);
-truthMat = zeros(p.totalPics*size(s1vec,2), 3);
+p.numPix = numel(imData(1,1).s1vec{1,1}{1,1});
+p.numOri = numel(imData(1,1).s1vec{1,1});
+dataMat  = zeros(p.NumObs, p.numOri*p.numPix);
+truthMat = zeros(p.NumObs, 3);
 
 count = 1;
 for im=1:p.totalPics;
-    for pat=1:size(s1vec,2)
-        for ori=1:size(s1vec,3)
-            dataMat(count, (ori-1)*numPix+1: (ori*numPix)) = mat2gray(s1vec{im, pat, ori});
-            
+    for pat=1:p.numPat
+        for ori=1:p.numOri
+            if p.nrmz
+                dataMat(count, (ori-1)*p.numPix+1: (ori*p.numPix)) = mat2gray(imData(im).s1vec{pat}{ori});
+            else
+                dataMat(count, (ori-1)*p.numPix+1: (ori*p.numPix)) = imData(im).s1vec{pat}{ori};
+            end
         end
-        truthMat(count,:) = truth{im,pat};
+        truthMat(count,:) = imData(im).truth(pat,:);
         count = count+1;
     end
     
@@ -82,13 +96,6 @@ res.YhatTest = YhatTest;
 res.Ytest = Ytest;
 end
 
-
-function  params = makeParam
-params.ratio = 0.95;
-params.totalPics = 1; %total number of pics to use
-params.matRegress = 1;
-params.singlePic = 1;
-end
 
 function errz = getMSE(dact,dpred)
 errz = mean(dact - dpred).^2;

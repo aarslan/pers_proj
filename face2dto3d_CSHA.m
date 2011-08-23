@@ -29,7 +29,7 @@ end
 PAR.numPat      = 25;
 PAR.downSamSiz  = 9;
 PAR.oriMode     = 1;                    % 1= mean orientation in the patch, else = mid point in the patch
-PAR.numPics     = 200;                  %numel(origPicPaths)
+PAR.numPics     = 8;                  %numel(origPicPaths)
 PAR.okBands     = 2:2:8;
 PAR.regularPatching = 0;
 PAR.patMode = 1;
@@ -175,18 +175,23 @@ s1vec       = cell(numPat,1);
 %warning('figure out a way to calculate s1vec size and preallocate')
 
 cnt = 1;
+joff=0;
 for j=1:numPat
     
     invalidCrop = 1;
     while invalidCrop
-        rect = rects(j,:);
+        rect = rects(j+joff,:);
+        j+joff
         origPat = imcrop(im, rect);
-        
-        if ~((numel(find(origPat == 0)) > (PAR.pSpec.patSize^2)/3) || numel(origPat) ~= (PAR.pSpec.patSize+1)^2) || ~isempty(origPat) %make sure that cropped section doesn't cover a lot of background.
+        joff = joff+1;
+        if ~((numel(find(origPat == 0)) > (PAR.pSpec.patSize^2)/3) || numel(origPat) ~= (PAR.pSpec.patSize+1)^2) %make sure that cropped section doesn't cover a lot of background.
             normPat = imcrop(imNorm, rect);
             [x y z] = getAveOri(normPat, PAR.oriMode);
             truth(cnt,:) = [x y z];
             s1vec{cnt} = vectorizeS1(s1,rect, PAR);
+            if sum(s1vec{cnt}{1}) == 0
+                display('eaja')
+            end
             origPats(cnt,:,:) = imresize(origPat, [PAR.downSamSiz, PAR.downSamSiz] );
             actRects(cnt,:) = rect;
             cnt = cnt+1;
