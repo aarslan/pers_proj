@@ -29,7 +29,7 @@ end
 PAR.numPat      = 25;
 PAR.downSamSiz  = 9;
 PAR.oriMode     = 1;                    % 1= mean orientation in the patch, else = mid point in the patch
-PAR.numPics     = 8;                  %numel(origPicPaths)
+PAR.numPics     = 1000;                  %numel(origPicPaths)
 PAR.okBands     = 2:2:8;
 PAR.regularPatching = 0;
 PAR.patMode = 1;
