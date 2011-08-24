@@ -1,11 +1,12 @@
 
-function res = doRegression(imData, PAR, or)
+function [res resPerm] = doRegression(imData, PAR, or)
 
 p.ratio = 0.95; %training vs test ratio
 p.totalPics = NaN; %total number of pics to use
 p.matRegress = 1; %use matlab's built-in regression
 p.singlePic = 0; %
 p.nrmz = 1; %normalize the features between 0-1?
+p.doPerm = 1; % 1 if you also want to regress on random labels
 
 if isnan(p.totalPics)
     p.totalPics = PAR.numPics;
@@ -65,7 +66,24 @@ else
 end
 
 if p.matRegress
-    [B, bint, r, rint, STATS]=regress(Y(:,or),X, 0.001);
+    scrm = randperm(size(Y,1));
+    res     = cannedReg(Y, Ytest, X, Xtest, or);
+    if p.doPerm
+    resPerm = cannedReg(Y, Ytest, X(scrm, :), Xtest, or);
+    end
+
+    % else
+%     [alpha,B] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
+%     YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},Xtest); 
+%     YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
+end
+
+save('regressionResults.mat', 'res','resPerm', 'p')
+end
+
+function res = cannedReg(Y, Ytest, X, Xtest, or)
+[B, bint, r, rint, STATS]=regress(Y(:,or),X, 0.001);
+    
     regressStats.bint = bint;
     regressStats.r = r;
     regressStats.rint = rint;
@@ -76,26 +94,18 @@ if p.matRegress
     YhatTra=X*B;
     res.MSE = getMSE(Ytest(:,or), YhatTest);
     display(sprintf('mean sq error: %f', res.MSE))
-else
-    [alpha,B] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
-    YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},Xtest); 
-    YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
+    
+    res.Ymean = mean(Y);
+    res.CorrTra = corr(Y(:,or), YhatTra);
+    display(sprintf('training corr: %f', res.CorrTra))
+    
+    res.CorrTest = corr(Ytest(:,or), YhatTest);
+    display(sprintf('test corr: %f', res.CorrTest))
+    res.B = B;
+    res.YhatTra = YhatTra;
+    res.YhatTest = YhatTest;
+    res.Ytest = Ytest;
 end
-
-res.Ymean = mean(Y);
-
-res.CorrTra = corr(Y(:,or), YhatTra);
-display(sprintf('training error: %f', res.CorrTra))
-
-res.CorrTest = corr(Ytest(:,or), YhatTest);
-display(sprintf('test error: %f', res.CorrTest))
-
-
-res.YhatTra = YhatTra;
-res.YhatTest = YhatTest;
-res.Ytest = Ytest;
-end
-
 
 function errz = getMSE(dact,dpred)
 errz = mean(dact - dpred).^2;
