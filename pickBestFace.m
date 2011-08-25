@@ -1,4 +1,4 @@
-function [picPath picInd] = pickBestFace(results, randomizer)
+function [picPath picInd] = pickBestFace(results)
 
 %NUMPAT ASSUMED TO BE 10
 numPat = 10;

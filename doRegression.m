@@ -39,7 +39,9 @@ for im=1:p.totalPics;
         truthMat(count,:) = imData(im).truth(pat,:);
         count = count+1;
     end
-    
+    imNames{im} = imData(im).name; %%%VERIYI KARMAN CORMAN EDERKEN ARKA ARKAYA GELEN PATCH'LERI BOLUYORUZ, SONRA NASIL BIR ARAYA GELECEKLER???
+    %belki bir resimden tum patch'leri grup grup scramble etmek daha iyi,
+    %hem trainin ve test arasinda bolunmemis olurlar.
 end
 
 for ob=1:3

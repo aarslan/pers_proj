@@ -1,5 +1,5 @@
 
-function res = doRegression(imData, PAR, or)
+function [res resPerm] = doRegression(imData, PAR, or)
 
 p.ratio = 0.95; %training vs test ratio
 p.totalPics = NaN; %total number of pics to use
@@ -39,7 +39,9 @@ for im=1:p.totalPics;
         truthMat(count,:) = imData(im).truth(pat,:);
         count = count+1;
     end
-    
+    imNames{im} = imData(im).name; %%%VERIYI KARMAN CORMAN EDERKEN ARKA ARKAYA GELEN PATCH'LERI BOLUYORUZ, SONRA NASIL BIR ARAYA GELECEKLER???
+    %belki bir resimden tum patch'leri grup grup scramble etmek daha iyi,
+    %hem trainin ve test arasinda bolunmemis olurlar.
 end
 
 for ob=1:3
@@ -68,7 +70,9 @@ end
 if p.matRegress
     scrm = randperm(size(Y,1));
     res     = cannedReg(Y, Ytest, X, Xtest, or);
+    if p.doPerm
     resPerm = cannedReg(Y, Ytest, X(scrm, :), Xtest, or);
+    end
 
     % else
 %     [alpha,B] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
@@ -76,7 +80,7 @@ if p.matRegress
 %     YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
 end
 
-save('')
+save('regressionResults.mat', 'res','resPerm', 'p')
 end
 
 function res = cannedReg(Y, Ytest, X, Xtest, or)
