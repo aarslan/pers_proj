@@ -1,7 +1,7 @@
 
 function [res resPerm imNames p] = doRegression(imData, PAR, or, varargin)
 
-p.ratio = 0.75; %training vs test ratio
+p.ratio = 0.90; %training vs test ratio
 p.totalPics = NaN; %total number of pics to use
 p.matRegress = 1; %use matlab's built-in regression
 p.singlePic = 0; %
@@ -76,13 +76,15 @@ if p.matRegress
     scrm = randperm(size(Y,1));
     res     = cannedReg(Y, Ytest, X, Xtest, or);
     if p.doPerm
-    resPerm = cannedReg(Y, Ytest, X(scrm, :), Xtest, or);
+        resPerm = cannedReg(Y, Ytest, X(scrm, :), Xtest, or);
+    else
+        resPerm = 'NOT DONE';
     end
-
+    
     % else
-%     [alpha,B] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
-%     YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},Xtest); 
-%     YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X); 
+    %     [alpha,B] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
+    %     YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},Xtest);
+    %     YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X);
 end
 
 imNames.trainIm = {imData(trainInd).name};
