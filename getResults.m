@@ -1,10 +1,20 @@
 
 results = cell(3,8);
 resultsPerm = cell(3,8);
-for or=1:3
-    or
-   parfor cv=1:8
-       cv
-       [results{or,cv} resultsPerm{or,cv}] = doRegression(imData, PAR, or)
-   end
+%imNames = cell(3,8);
+
+rand('state',sum(100*clock))
+
+parfor cv=1:8
+    swirler = randi(5000);
+    for or=1:3
+        display(['cv: '  mat2str(cv) ', ori: ' mat2str(or)])
+        [results{or,cv} resultsPerm{or,cv} imNames{or,cv} p] = doRegression(imData, PAR, or, swirler);
+    end
 end
+
+totalResults.results         = results;
+totalResultsPerm.resultsPerm = resultsPerm;
+totalResults.imNames         = imNames;
+
+save('totalResults.mat', 'totalResults')
