@@ -3,7 +3,7 @@ function [res resPerm imNames p] = doRegression(imData, PAR, or, varargin)
 
 p.ratio = 0.90; %training vs test ratio
 p.totalPics = NaN; %total number of pics to use
-p.matRegress = 1; %use matlab's built-in regression
+p.matRegress = 0; %use matlab's built-in regression
 p.singlePic = 0; %
 p.nrmz = 1; %normalize the features between 0-1?
 p.doPerm = 0; % 1 if you also want to regress on random labels
@@ -44,7 +44,7 @@ for im=1:p.totalPics;
         truthMat(count,:) = imData(im).truth(pat,:);
         count = count+1;
     end
-    imNames{im} = imData(im).name; %%%VERIYI KARMAN CORMAN EDERKEN ARKA ARKAYA GELEN PATCH'LERI BOLUYORUZ, SONRA NASIL BIR ARAYA GELECEKLER???
+    imNames.all{im} = imData(im).name; %%%VERIYI KARMAN CORMAN EDERKEN ARKA ARKAYA GELEN PATCH'LERI BOLUYORUZ, SONRA NASIL BIR ARAYA GELECEKLER???
     %belki bir resimden tum patch'leri grup grup scramble etmek daha iyi,
     %hem trainin ve test arasinda bolunmemis olurlar.
 end
@@ -85,6 +85,9 @@ if p.matRegress
     %     [alpha,B] = trainlssvm({X, Y, type, gam, sig2, 'RBF_kernel','preprocess'});
     %     YhatTest = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},Xtest);
     %     YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X);
+else
+    res     = cannedReg_liblin(Y, Ytest, X, Xtest, or);
+    
 end
 
 imNames.trainIm = {imData(trainInd).name};
@@ -117,7 +120,31 @@ function res = cannedReg(Y, Ytest, X, Xtest, or)
     res.YhatTest = YhatTest;
     res.Ytest = Ytest;
 end
+function res = cannedReg_liblin(Y, Ytest, X, Xtest, or)
 
+    model = train(Y(:, or), sparse(X), ['-s 7']);
+    [YhatTest, accuracy, decision_values] = predict(Ytest(:, or), sparse(Xtest), model);
+
+    regressStats.decision_values = decision_values;
+    regressStats.accuracy = accuracy;
+    res.regressStats = regressStats;
+    
+
+    [YhatTra, ~, ~] = predict(Y(:, or), sparse(X), model);
+    res.MSE = getMSE(Ytest(:,or), YhatTest);
+    display(sprintf('mean sq error: %f', res.MSE))
+    
+    res.Ymean = mean(Y);
+    res.CorrTra = corr(Y(:,or), YhatTra);
+    display(sprintf('training corr: %f', res.CorrTra))
+    
+    res.CorrTest = corr(Ytest(:,or), YhatTest);
+    display(sprintf('test corr: %f', res.CorrTest))
+    res.B = 'NULL';
+    res.YhatTra = YhatTra;
+    res.YhatTest = YhatTest;
+    res.Ytest = Ytest;
+end
 function errz = getMSE(dact,dpred)
 errz = mean(dact - dpred).^2;
 end
