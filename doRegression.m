@@ -87,7 +87,11 @@ if p.matRegress
     %     YhatTra = simlssvm({X, Y,type,gam,sig2,'RBF_kernel'},{alpha,B},X);
 else
     res     = cannedReg_liblin(Y, Ytest, X, Xtest, or);
-    
+    if p.doPerm
+        resPerm = cannedReg_liblin(Y, Ytest, X(scrm, :), Xtest, or);
+    else
+        resPerm = 'NOT DONE';
+    end
 end
 
 imNames.trainIm = {imData(trainInd).name};
